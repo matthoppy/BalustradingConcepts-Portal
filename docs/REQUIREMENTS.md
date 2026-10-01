@@ -282,6 +282,54 @@ Unex's design.
 - **RPT-6** Export any list to CSV.
 - **RPT-7 (v2)** Job margin (quoted vs Unex cost + labour).
 
+### 5.17 Staff assistant (chat)
+
+A chat panel for staff, available on every page and on the phone, for asking questions in plain
+English. Examples:
+
+- "What's the trade rate per metre for frameless glass?"
+- "Quick price: 6.5 m of channel glass at 1200 high on a membrane deck, retail."
+- "Which quotes are waiting on a response from last week?"
+- "Who's installing tomorrow and where?"
+- "What's outstanding on the Kauri Builders Ponsonby job?"
+- "How many website enquiries did we get in September, and how many did we win?"
+
+Requirements:
+
+- **AST-1** Answers come **only from CRM data via tools**, never from the AI's own memory. If the data
+  isn't there, it says so. Every answer links to the records it used (job, quote, price book entry).
+- **AST-2** Numbers are never worked out by the AI. Prices and quick quotes go through the **same
+  quote calculator** as real quotes (5.5), so the chat and the PDF can't disagree.
+- **AST-3** The assistant **sees only what the person asking can see.** It queries the database as that
+  staff member, so database permissions apply (e.g. an installer only gets answers about their jobs).
+- **AST-4** **Read-only in v1.** It can look things up, but it can't change, send or delete anything.
+- **AST-5** Tools available to it (fixed list, no free-form database access):
+  price book lookup, quick price (calculator), search jobs, job summary, search contacts/companies,
+  quotes by status, invoices and deposits outstanding, schedule (surveys/installs by date or person),
+  Unex orders and deliveries due, pipeline and report figures.
+- **AST-6** "Ask about this job" button on a job page starts the chat with that job in context.
+- **AST-7** Usage log (who asked, when, cost) and a monthly spending cap set by Admin; when the cap
+  is reached the chat pauses until next month or the cap is raised.
+- **AST-8 (v2)** Actions with confirmation: "add a follow-up task for Friday", "draft the quote
+  reminder email to Hana". The assistant prepares it, and a staff member clicks to confirm.
+- **AST-9 (v2)** Technical library: upload Unex product specs, install guides and engineering
+  tables, so staff can ask "max post spacing for X on timber?" and get an answer quoting the source
+  page.
+
+Notes:
+
+- **Why read-only first:** some data the assistant reads, like website enquiry messages, is written by
+  the public. A read-only assistant can't be tricked into doing anything with it. Actions come in v2,
+  always with a confirmation click.
+- **Model:** an Anthropic Claude model via the Claude API with tool use. Which model is an Admin
+  setting, so it can be changed later without code changes.
+- **Cost (estimate, USD):** roughly 2–5 cents per question. At about 5 questions per staff member per
+  working day, that's around US$30–60 a month for 10 staff. Prompt caching keeps repeat costs down, and
+  the cap in AST-7 sets a hard limit.
+- **Privacy:** questions and the records the assistant looks up are sent to Anthropic (overseas) to be
+  processed. The privacy policy should say so (Privacy Act 2020, IPP 12). API data isn't used to train
+  models by default.
+
 ## 6. Non-functional requirements
 
 - **Security:** staff login with email + password or magic link, MFA available (required for Admin).
@@ -317,6 +365,7 @@ Balustrading Concepts already uses **Cloudflare**, so the app is hosted there al
 | SMS | Twilio (or NZ provider) | Survey/install confirmations and reminders. |
 | Addresses | Addressfinder | NZ address autocomplete. |
 | PDFs | Server-side React PDF | Branded quotes and invoices. |
+| Staff assistant | Claude API (Anthropic TypeScript SDK, tool use) | Answers questions from CRM data through read-only tools (5.17). |
 
 **Why not all-Cloudflare (D1 + R2)?** D1 is SQLite with no row-level security and no built-in user
 login, so the customer portal's "only see your own jobs" guarantee and the staff/customer logins would
@@ -340,9 +389,10 @@ Draft database schema: [`schema-draft.sql`](schema-draft.sql).
    paid status from Xero.
 4. **Delivery:** Unex orders, compliance checklist, install calendar, installer mobile view, sign-off,
    variations, final invoices.
-5. **Insight:** dashboard and reports, reminders and notifications polish.
+5. **Insight:** dashboard and reports, reminders and notifications polish, **staff assistant**
+   (read-only). Price book lookups and quick price can ship earlier, as soon as milestone 2 is in.
 
-**v2:** offline survey capture, Unex cost prices and job margin, emailing orders to Unex, PS3/warranty
+**v2:** assistant actions with confirmation and the Unex technical library, offline survey capture, Unex cost prices and job margin, emailing orders to Unex, PS3/warranty
 templates, variation approval and final payment in the portal, review requests, warranty/maintenance
 reminders, Gmail logging, website gallery feed.
 
@@ -372,3 +422,5 @@ Open questions:
 6. **Existing data** — beyond Xero contacts, is there a spreadsheet of open jobs/quotes to import?
 7. **Branding** — logo, colours and your current quote T&Cs for the quote PDF and portal.
 8. **Commercial jobs** — do any head contractors hold retentions or require formal payment claims?
+9. **Pricing visibility** — should installers see prices (in the app and through the assistant), or
+   only surveyors, office and admin?

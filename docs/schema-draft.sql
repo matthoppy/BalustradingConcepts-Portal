@@ -125,6 +125,8 @@ create table settings (
   length_rounding_m       numeric(4,2) not null default 0.10,
   quote_terms             text,
   xero_invoices_as_draft  boolean not null default true,
+  assistant_model         text,                                   -- Claude model ID, set by Admin
+  assistant_monthly_cap_usd numeric(10,2) not null default 100,   -- staff assistant pauses at this spend
   updated_at              timestamptz not null default now()
 );
 insert into settings default values;
@@ -481,6 +483,22 @@ create table tasks (
   created_at   timestamptz not null default now()
 );
 create index tasks_open_idx on tasks (assigned_to, due_on) where completed_at is null;
+
+-- One row per staff assistant question, for the usage log and the monthly cap.
+create table assistant_usage (
+  id                 bigint generated always as identity primary key,
+  staff_id           uuid not null references staff (id),
+  job_id             uuid references jobs (id) on delete set null,   -- set when asked from a job page
+  question           text not null,
+  tools_used         text[] not null default '{}',
+  model              text not null,
+  input_tokens       int not null default 0,
+  cache_read_tokens  int not null default 0,
+  output_tokens      int not null default 0,
+  cost_usd           numeric(10,4) not null default 0,
+  created_at         timestamptz not null default now()
+);
+create index assistant_usage_month_idx on assistant_usage (created_at);
 
 create table audit_log (
   id         bigint generated always as identity primary key,
